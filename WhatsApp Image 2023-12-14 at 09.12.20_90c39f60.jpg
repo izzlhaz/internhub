@@ -1,0 +1,291 @@
+<?php
+require_once __DIR__ . '/config/database.php';
+
+$error = '';
+$success = '';
+
+// Process login
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = trim($_POST['email']);
+    $password = $_POST['password'];
+    $role = $_POST['role']; // student, lecturer, coordinator, company
+    
+    // Validate role
+    $allowed_roles = ['student', 'lecturer', 'coordinator', 'company'];
+    if (!in_array($role, $allowed_roles)) {
+        $error = "Invalid role selected";
+    } else {
+        // Check user exists with this role
+        $stmt = $pdo->prepare("
+            SELECT * FROM user 
+            WHERE user_email = ? 
+            AND user_role = ? 
+            AND user_status = 'Active'
+        ");
+        $stmt->execute([$email, $role]);
+        $user = $stmt->fetch();
+        
+        if ($user && password_verify($password, $user['user_password'])) {
+            // Set session
+            $_SESSION['user_id'] = $user['user_id'];
+            $_SESSION['user_name'] = $role === 'student' ? strtoupper($user['user_name']) : $user['user_name'];
+            $_SESSION['user_email'] = $user['user_email'];
+            $_SESSION['user_role'] = $user['user_role'];
+            $_SESSION['must_change_password'] = (bool) ($user['user_must_change_password'] ?? false);
+            
+            // Get role-specific ID
+            if ($role == 'student') {
+                $stmt2 = $pdo->prepare("SELECT student_id FROM student WHERE user_id = ?");
+                $stmt2->execute([$user['user_id']]);
+                $result = $stmt2->fetch();
+                if ($result) {
+                    $_SESSION['student_id'] = $result['student_id'];
+                    header('Location: ' . ($_SESSION['must_change_password'] ? 'change_password.php' : 'student/dashboard.php'));
+                    exit();
+                } else {
+                    $error = "Student profile not found";
+                }
+            } 
+            elseif ($role == 'lecturer') {
+                $stmt2 = $pdo->prepare("SELECT lecturer_id FROM lecturer WHERE user_id = ?");
+                $stmt2->execute([$user['user_id']]);
+                $result = $stmt2->fetch();
+                if ($result) {
+                    $_SESSION['lecturer_id'] = $result['lecturer_id'];
+                    header('Location: ' . ($_SESSION['must_change_password'] ? 'change_password.php' : 'lecturer/lecturer_dashboard.php'));
+                    exit();
+                } else {
+                    $error = "Lecturer profile not found";
+                }
+            }
+            elseif ($role == 'coordinator') {
+                $stmt2 = $pdo->prepare("SELECT coordinator_id FROM coordinator WHERE user_id = ?");
+                $stmt2->execute([$user['user_id']]);
+                $result = $stmt2->fetch();
+                if ($result) {
+                    $_SESSION['coordinator_id'] = $result['coordinator_id'];
+                    header("Location: coordinator/dashboard.php");
+                    exit();
+                } else {
+                    $error = "Coordinator profile not found";
+                }
+            }
+            elseif ($role == 'company') {
+                $stmt2 = $pdo->prepare("SELECT company_id FROM company WHERE user_id = ?");
+                $stmt2->execute([$user['user_id']]);
+                $result = $stmt2->fetch();
+                if ($result) {
+                    $_SESSION['company_id'] = $result['company_id'];
+                    header("Location: company/dashboard.php");
+                    exit();
+                } else {
+                    $error = "Company profile not found";
+                }
+            }
+        } else {
+            $error = "Invalid email or password for selected role";
+        }
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InternHub - Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/theme.css?v=20260615-ds">
+    <link rel="stylesheet" href="assets/css/internhub.css?v=20260615-v2">
+    <style>
+        .login-shell { width: min(940px, 100%); }
+        .login-card {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 568px;
+            background: var(--surface);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        /* Brand panel (dark maroon) */
+        .login-brand {
+            position: relative;
+            padding: 42px 40px;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 22px;
+            background: linear-gradient(165deg, var(--maroon-900), var(--maroon-700));
+        }
+        .login-brand-lockup img { margin-bottom: 2px; }
+        .login-brand-lockup { position: relative; }
+        /* register button is always reserved so the card height stays constant across roles */
+        #companyRegistrationBtn { visibility: hidden; pointer-events: none; }
+        #companyRegistrationBtn.show { visibility: visible; pointer-events: auto; }
+        .login-brand-lockup img { width: 100%; max-width: 250px; height: auto; display: block; }
+        .login-brand-foot { position: relative; }
+        .login-brand-rule { display: block; width: 44px; height: 2px; background: var(--gold-500); border-radius: 999px; margin-bottom: 18px; }
+        .login-wordmark { font-family: var(--font-serif); font-weight: 700; font-size: 30px; letter-spacing: -0.02em; line-height: 1; margin-bottom: 12px; }
+        .login-wordmark span { color: var(--gold-400); }
+        .login-brand-foot p { color: rgba(255,255,255,0.80); font-size: 14px; line-height: 1.6; max-width: 330px; margin: 0; }
+        .login-feats { list-style: none; padding: 0; margin: 18px 0 0; display: grid; gap: 9px; }
+        .login-feats li { display: flex; align-items: center; gap: 10px; font-size: 13px; color: rgba(255,255,255,0.82); }
+        .login-feats i { width: 26px; height: 26px; border-radius: 7px; background: rgba(205,162,63,0.18); color: var(--gold-400); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; flex: 0 0 auto; }
+        .login-brand-cap { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-top: 14px; }
+        /* Form panel */
+        .login-form-panel { padding: 42px 40px; display: flex; flex-direction: column; justify-content: flex-start; }
+        .login-form-panel h3 { font-family: var(--font-ui); font-weight: 800; font-size: 24px; color: var(--text-strong); margin: 6px 0 22px; }
+        .role-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .role-btn {
+            cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; gap: 7px;
+            padding: 14px 4px;
+            border-radius: var(--radius-md);
+            background: var(--surface);
+            border: 1.5px solid var(--border-strong);
+            transition: all var(--dur-fast) var(--ease-out);
+        }
+        .role-btn i { font-size: 18px; color: var(--ink-400); }
+        .role-btn .fw-bold { font-size: 11px; font-weight: 700; color: var(--ink-500); }
+        .role-btn:hover { border-color: var(--maroon-400); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+        .role-btn.active { background: var(--maroon-50); border-color: var(--maroon-500); box-shadow: inset 0 0 0 1px rgba(168,48,82,0.12); }
+        .role-btn.active i { color: var(--maroon-600); }
+        .role-btn.active .fw-bold { color: var(--maroon-700); }
+        @media (max-width: 767.98px) {
+            .login-card { grid-template-columns: 1fr; }
+            .login-brand { padding: 30px 26px; }
+            .login-form-panel { padding: 30px 26px; }
+        }
+    </style>
+
+
+</head>
+<body class="login-page">
+    <div class="login-shell">
+        <div class="login-card">
+            <!-- Brand panel -->
+            <div class="login-brand">
+                <div class="login-brand-lockup">
+                    <img src="assets/img/logo-light.png" alt="TISSA · Universiti Utara Malaysia">
+                </div>
+                <div class="login-brand-foot">
+                    <span class="login-brand-rule"></span>
+                    <div class="login-wordmark">Intern<span>Hub</span></div>
+                    <p>One place for the whole internship cycle at the Tunku Puteri Intan Safinaz School of Accountancy.</p>
+                    <ul class="login-feats">
+                        <li><i class="fas fa-paper-plane"></i> Applications &amp; placements</li>
+                        <li><i class="fas fa-book-open"></i> Weekly logbooks</li>
+                        <li><i class="fas fa-user-check"></i> Supervisor assignment</li>
+                        <li><i class="fas fa-clipboard-check"></i> Company &amp; lecturer evaluations</li>
+                    </ul>
+                    <div class="login-brand-cap">TISSA &middot; UUM &middot; Internship Programme</div>
+                </div>
+            </div>
+
+            <!-- Form panel -->
+            <div class="login-form-panel">
+                <span class="kicker">Sign in to your portal</span>
+                <h3>Welcome back</h3>
+
+                <?php if($error): ?>
+                    <div class="alert alert-danger py-2"><i class="fas fa-circle-exclamation me-2"></i><?php echo $error; ?></div>
+                <?php endif; ?>
+                <?php if($success): ?>
+                    <div class="alert alert-success py-2"><?php echo $success; ?></div>
+                <?php endif; ?>
+
+                <form method="POST" id="loginForm" autocomplete="off">
+                    <div class="mb-3">
+                        <label class="form-label">Login as</label>
+                        <div class="role-grid">
+                            <div class="role-btn" data-role="student">
+                                <i class="fas fa-user-graduate"></i>
+                                <div class="fw-bold">Student</div>
+                            </div>
+                            <div class="role-btn" data-role="lecturer">
+                                <i class="fas fa-chalkboard-user"></i>
+                                <div class="fw-bold">Lecturer</div>
+                            </div>
+                            <div class="role-btn" data-role="coordinator">
+                                <i class="fas fa-user-tie"></i>
+                                <div class="fw-bold">Coordinator</div>
+                            </div>
+                            <div class="role-btn" data-role="company">
+                                <i class="fas fa-building"></i>
+                                <div class="fw-bold">Company</div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="role" id="selectedRole" value="student">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Email address</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                            <input type="email" name="email" id="loginEmail" class="form-control" required placeholder="you@uum.edu.my" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" name="password" id="loginPassword" class="form-control" required placeholder="Enter your password" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2">
+                        <i class="fas fa-arrow-right-to-bracket me-2"></i>Sign in
+                    </button>
+                    <a href="company_register.php" id="companyRegistrationBtn" class="btn btn-outline-primary w-100 py-2 mt-2">
+                        <i class="fas fa-user-plus me-2"></i>Register a company
+                    </a>
+                </form>
+            </div>
+        </div>
+        <footer class="login-credit text-center">
+            <div><strong>Developer:</strong> Mimi Nadzirah Afiqah | Norul Waizzah | Norjuliana | Ku Nuraliya | Farzana</div>
+            <div><strong>Supervisor:</strong> Dr. Hisham Sharif | Dr. Hadzrami</div>
+        </footer>
+    </div>
+    
+    <script>
+        function toggleCompanyRegistration(role) {
+            const registrationBtn = document.getElementById('companyRegistrationBtn');
+            registrationBtn.classList.toggle('show', role === 'company');
+        }
+
+        // Role selection handler
+        document.querySelectorAll('.role-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active class from all
+                document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+                // Add active class to clicked
+                this.classList.add('active');
+                // Set hidden input value
+                const role = this.getAttribute('data-role');
+                document.getElementById('selectedRole').value = role;
+                toggleCompanyRegistration(role);
+            });
+        });
+        
+        // Set default active (student)
+        document.querySelector('.role-btn[data-role="student"]').classList.add('active');
+        toggleCompanyRegistration('student');
+
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                const email = document.getElementById('loginEmail');
+                const password = document.getElementById('loginPassword');
+                if (email) email.value = '';
+                if (password) password.value = '';
+            }, 50);
+        });
+    </script>
+</body>
+</html>

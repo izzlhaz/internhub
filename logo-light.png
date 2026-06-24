@@ -1,0 +1,170 @@
+# InternHub Complete Testing Flow
+
+Open: `http://localhost/internhub_tissa/`
+
+Students and lecturers use their IC number as the initial password. On first login, they must create a new password before entering the system. Use a different demo account for each tester if another tester has already changed the password.
+
+## Recommended End-to-End Evaluation Record
+
+Use this connected set to test logbook, company evaluations, lecturer evaluation, and final result:
+
+| Role | Email | Initial password |
+|---|---|---|
+| Student: Haziq Ismail 46 | `student046@demo.internhub.test` | `010045300045` |
+| Company: BluePeak Consulting | `company06@demo.internhub.test` | `Company@123` |
+| Lecturer: Dr Imran Ismail | `lecturer06@demo.internhub.test` | `810005200005` |
+| Coordinator: Demo Coordinator | `coordinator.demo@internhub.test` | `Coordinator@123` |
+
+This student is an active B.Acct intern with no evaluation submitted. The internship dates allow both company evaluation rounds to be tested now.
+
+## A. Login
+
+1. Open the login page.
+2. Select the correct role: Student, Company, Lecturer, or Coordinator.
+3. Enter the role email and password from the table above.
+4. For a student or lecturer logging in for the first time, create a new password when prompted.
+5. Log in again using the new password if redirected to the login page.
+
+## B. Student Applies for an Internship
+
+Use a student without an internship, for example:
+
+- Email: `student081@demo.internhub.test`
+- Initial password: `010080300080`
+
+Steps:
+
+1. Log in as Student.
+2. Open `Resume`.
+3. Upload a valid PDF resume. An application cannot be submitted without a PDF resume.
+4. Open `Available Internships` or `Jobs`.
+5. Review a vacancy and click `Apply Now`.
+6. Open `My Applications` to check the application status.
+7. Log out.
+
+## C. Company Processes the Application
+
+1. Log in as the company that owns the vacancy selected by the student.
+2. Open `Applications`.
+3. Open the student's application.
+4. Review the student profile and resume.
+5. Change the application status through the required stages, such as `Shortlisted`, `Interview`, and finally `Accepted`.
+6. Log out.
+
+## D. Student Accepts the Offer
+
+1. Log in as the same student.
+2. Open `My Applications`.
+3. Find the application marked `Accepted` by the company.
+4. Click `Accept` under Offer Decision.
+5. The student can accept only one company offer.
+6. Log out.
+
+## E. Coordinator Assigns the Supervisor
+
+1. Log in as Coordinator.
+2. Open `Assign Supervisor`.
+3. Open the `To Assign` tab.
+4. Select a compatible lecturer:
+   - B.Acct (IS) students must be assigned to a B.Acct (IS) lecturer.
+   - B.Acct students can be assigned to a B.Acct lecturer.
+5. Select the accepted student.
+6. Enter internship start and end dates.
+7. Click `Assign`.
+8. Confirm the student appears under the `Assigned` tab.
+
+For immediate evaluation testing, use dates that make the evaluation periods available. The prepared Haziq Ismail 46 record already has suitable dates.
+
+## F. Student Submits the Logbook
+
+Use the prepared Student 46 account.
+
+1. Log in as `student046@demo.internhub.test`.
+2. Open `Logbook`.
+3. Enter a new week number that has not been used, for example Week 2.
+4. Enter tasks performed, problems encountered, and solutions or learning outcomes.
+5. Click `Submit Logbook`.
+6. Confirm the entry appears with status `Submit`.
+7. Log out.
+
+## G. Lecturer Reviews the Logbook
+
+1. Log in as `lecturer06@demo.internhub.test`.
+2. Open `Logbooks`.
+3. Select the `B.Acct Students` tab.
+4. Find Haziq Ismail 46.
+5. Open the submitted week and mark it as reviewed.
+6. Confirm its status changes to `Review`.
+
+## H. Company Submits Both Evaluations
+
+1. Log in as `company06@demo.internhub.test` using `Company@123`.
+2. Open `My Interns`.
+3. Find Haziq Ismail 46.
+4. Under `First 3 Month Evaluation`, click `Evaluate`.
+5. Score every rubric item from 1 to 4 and submit.
+6. Return to `My Interns`.
+7. Under `Final Evaluation`, click `Evaluate`.
+8. Complete every rubric item and submit.
+9. Confirm both columns show `Submitted`.
+10. Log out.
+
+The final evaluation cannot be submitted before the first evaluation.
+
+## I. Lecturer Submits the Evaluation
+
+1. Log in as `lecturer06@demo.internhub.test`.
+2. Open `My Interns`.
+3. Select the `B.Acct Students` tab.
+4. Find Haziq Ismail 46 and click `Evaluate`.
+5. Score every item from 0 to 12.
+6. Submit the lecturer evaluation.
+7. The saved evaluation becomes read-only after submission.
+8. Log out.
+
+## J. Coordinator Views the Result
+
+1. Log in as Coordinator.
+2. Open `Evaluations`.
+3. Search for `Haziq Ismail 46`.
+4. Confirm the page shows:
+   - Company evaluation: 2/2 submitted
+   - Lecturer evaluation: completed
+   - Total marks
+   - Final grade
+5. Click `Transcript`.
+6. Review:
+   - Lecturer evaluation marks out of 12
+   - First 3 Month Company Evaluation marks out of 4
+   - Final Month Company Evaluation marks out of 4
+   - Overall company evaluation
+   - Total grade
+7. Open `Export Reports` to view all fully evaluated records.
+8. Use `Export Excel` or `Print / Save PDF` if required.
+
+## K. Student Checks Progress and Result
+
+1. Log in as the evaluated student.
+2. Open the Student Dashboard.
+3. Review internship progress and evaluation completion indicators.
+4. The final result becomes available after both company evaluations and the lecturer evaluation are completed.
+
+## Ready-Made Records for Quick Checks
+
+| Purpose | Student | Email | Initial password |
+|---|---|---|---|
+| Fully completed result | Alya Abdullah 01 | `student001@demo.internhub.test` | `010000300000` |
+| First company + lecturer submitted | Alya Mahmud 21 | `student021@demo.internhub.test` | `010020300020` |
+| Two company evaluations, lecturer pending | Nurul Hassan 31 | `student031@demo.internhub.test` | `010030300030` |
+| Lecturer evaluation only | Balqis Ahmad 36 | `student036@demo.internhub.test` | `010035300035` |
+| Company evaluation only | Alya Mahmud 41 | `student041@demo.internhub.test` | `010040300040` |
+| No evaluations, complete live test | Haziq Ismail 46 | `student046@demo.internhub.test` | `010045300045` |
+| Application testing | Alya Mahmud 81 | `student081@demo.internhub.test` | `010080300080` |
+
+## Important Notes
+
+- Company demo accounts use password `Company@123`.
+- Student and lecturer initial passwords are their IC numbers.
+- A changed student or lecturer password cannot be reset by reusing the IC unless the database is reseeded.
+- Use a fresh demo account for each tester.
+- Use `coordinator.demo@internhub.test` with `Coordinator@123` for testing. The original Dr Hadzrami coordinator account remains unchanged.

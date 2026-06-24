@@ -1,0 +1,104 @@
+<?php
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/evaluation_helpers.php';
+require_once __DIR__ . '/../includes/management_helpers.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'lecturer') {
+    header("Location: ../login.php");
+    exit();
+}
+
+ensure_management_schema($pdo);
+ensure_company_evaluation_round_schema($pdo);
+$companySummary = company_evaluation_summary_sql('ce');
+$lecturer_id = $_SESSION['lecturer_id'];
+
+$stmt = $pdo->prepare("SELECT internship_id FROM internship WHERE lecturer_id = ?");
+$stmt->execute([$lecturer_id]);
+foreach ($stmt->fetchAll() as $row) {
+    sync_report($pdo, $row['internship_id']);
+}
+
+$stmt = $pdo->prepare("
+    SELECT s.student_matric_no, s.student_name, s.student_email, s.student_phone, s.student_course,
+           c.company_name, c.company_type,
+           ce.ce_total_score, ce.ce_count, le.le_total_score, r.report_total_score, r.report_grade
+    FROM internship i
+    JOIN student s ON s.student_id = i.student_id
+    JOIN company c ON c.company_id = i.company_id
+    LEFT JOIN {$companySummary} ON ce.internship_id = i.internship_id
+    LEFT JOIN lecturerevaluation le ON le.internship_id = i.internship_id
+    LEFT JOIN report r ON r.internship_id = i.internship_id
+    WHERE i.lecturer_id = ?
+    ORDER BY s.student_name
+");
+$stmt->execute([$lecturer_id]);
+$rows = $stmt->fetchAll();
+
+$headers = ['Student Profile', 'Programme', 'Internship Company', 'Industry Type', 'Lecturer Evaluation Marks', 'Company Evaluation Marks', 'Final Marks', 'Final Grade'];
+$format = $_GET['format'] ?? '';
+
+function lecturer_report_row_values($row)
+{
+    return [
+        $row['student_name'] . ' (' . $row['student_matric_no'] . ') - ' . $row['student_email'] . ' / ' . ($row['student_phone'] ?: '-'),
+        programme_short_label($row['student_course']),
+        $row['company_name'] ?: 'Pending',
+        $row['company_type'] ?: 'Pending',
+        $row['le_total_score'] !== null ? $row['le_total_score'] . '/60' : 'Pending',
+        (int) $row['ce_count'] === 2 ? weighted_company_score($row['ce_total_score'], 2) . '/40' : 'Pending',
+        $row['report_total_score'] !== null ? $row['report_total_score'] . '%' : 'Pending',
+        $row['report_grade'] ?: 'Pending',
+    ];
+}
+
+if ($format === 'excel') {
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="lecturer_student_reports.csv"');
+    $out = fopen('php://output', 'w');
+    fputcsv($out, $headers);
+    foreach ($rows as $row) {
+        fputcsv($out, lecturer_report_row_values($row));
+    }
+    exit();
+}
+
+?>
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lecturer Reports Export - InternHub</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<?php if ($format !== 'excel'): ?><link rel="stylesheet" href="../assets/css/theme.css"><?php endif; ?>
+<style>
+.report-card-body{padding:1rem;overflow:hidden}
+.lecturer-report-table{width:100%;table-layout:fixed;margin-bottom:0;font-size:.76rem}
+.lecturer-report-table th,.lecturer-report-table td{padding:.65rem .45rem;vertical-align:middle;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.35}
+.lecturer-report-table thead th{text-align:center;font-size:.72rem;white-space:normal!important;overflow-wrap:normal;word-break:keep-all;hyphens:none;vertical-align:middle;font-family:'Hanken Grotesk',system-ui,sans-serif !important;text-transform:none !important;letter-spacing:0 !important}
+.lecturer-report-table td:nth-child(n+5){text-align:center}
+@media (max-width:1199.98px){.lecturer-report-table{font-size:.69rem}.lecturer-report-table th,.lecturer-report-table td{padding:.5rem .3rem}}
+@media print{
+    @page{size:landscape;margin:7mm}
+    .no-print{display:none!important}.content{width:100%!important;max-width:none!important;padding:0!important}.card{border:0!important;box-shadow:none!important}
+    .report-card-body{padding:0!important}.lecturer-report-table{font-size:7.5pt}.lecturer-report-table th,.lecturer-report-table td{padding:3pt 2pt}
+}
+</style></head>
+<body>
+<?php if ($format !== 'excel'): ?>
+<div class="container-fluid"><div class="row"><div class="col-md-2 p-0 sidebar no-print"><div class="sb-brand"><img class="sb-logo" src="../assets/img/logo-light.png" alt="TISSA UUM"><span class="sb-wordmark">Intern<span>Hub</span></span></div><hr class="bg-white"><a href="lecturer_dashboard.php">Dashboard</a><a href="profile.php">Profile</a><a href="interns.php">My Interns</a><a href="logbooks.php">Logbooks</a><a href="report.php" class="active">Reports</a><a href="../logout.php" class="text-danger">Logout</a></div><div class="col-md-10 content">
+<div class="text-end text-muted small mb-2">Logged in as <?php echo htmlspecialchars($_SESSION['user_name'] ?? 'Lecturer'); ?></div>
+<h2>Export Student Reports</h2>
+<div class="card mb-3 no-print"><div class="card-body"><a class="btn btn-primary" href="report.php?format=excel">Export Excel</a> <button class="btn btn-outline-secondary" onclick="window.print()">Print / Save PDF</button></div></div>
+<div class="card"><div class="card-body report-card-body">
+<?php endif; ?>
+<table class="table table-bordered table-striped lecturer-report-table">
+<colgroup><col style="width:22%"><col style="width:9%"><col style="width:13%"><col style="width:10%"><col style="width:14%"><col style="width:15%"><col style="width:9%"><col style="width:8%"></colgroup>
+<thead><tr><?php foreach ($headers as $header): ?><th><?php echo htmlspecialchars($header); ?></th><?php endforeach; ?></tr></thead>
+<tbody><?php foreach ($rows as $row): ?><tr><?php foreach (lecturer_report_row_values($row) as $value): ?><td><?php echo htmlspecialchars($value); ?></td><?php endforeach; ?></tr><?php endforeach; ?></tbody>
+</table>
+<?php if ($format !== 'excel'): ?>
+</div></div></div></div></div>
+<?php endif; ?>
+</body></html>

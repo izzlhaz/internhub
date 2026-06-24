@@ -1,0 +1,485 @@
+<?php
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/management_helpers.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'lecturer') {
+    header("Location: ../login.php");
+    exit();
+}
+
+ensure_management_schema($pdo);
+
+$lecturer_id = $_SESSION['lecturer_id'];
+
+$stmt = $pdo->prepare("SELECT * FROM lecturer WHERE lecturer_id = ?");
+$stmt->execute([$lecturer_id]);
+$lecturer = $stmt->fetch();
+
+$sessionStmt = $pdo->prepare("
+    SELECT DISTINCT s.student_intake
+    FROM internship i
+    JOIN student s ON s.student_id = i.student_id
+    WHERE i.lecturer_id = ? AND s.student_intake IS NOT NULL AND s.student_intake <> ''
+    ORDER BY s.student_intake DESC
+");
+$sessionStmt->execute([$lecturer_id]);
+$sessionOptions = $sessionStmt->fetchAll(PDO::FETCH_COLUMN);
+$timeFrame = strtoupper(trim($_GET['time_frame'] ?? ($sessionOptions[0] ?? 'all')));
+$stateFilter = $_GET['state'] ?? 'all';
+$studentFilter = $_GET['student_filter'] ?? 'all';
+
+$allowedTimeFrames = array_merge(['all'], array_map('strtoupper', $sessionOptions));
+$allowedStudents = ['all', 'intern', 'pending', 'not_intern'];
+$malaysiaStates = [
+    'Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang', 'Perak', 'Perlis',
+    'Pulau Pinang', 'Sabah', 'Sarawak', 'Selangor', 'Terengganu', 'Kuala Lumpur', 'Labuan', 'Putrajaya'
+];
+
+if (!in_array($timeFrame, $allowedTimeFrames, true)) $timeFrame = $sessionOptions ? strtoupper($sessionOptions[0]) : 'all';
+if ($stateFilter !== 'all' && !in_array($stateFilter, $malaysiaStates, true)) $stateFilter = 'all';
+if (!in_array($studentFilter, $allowedStudents, true)) $studentFilter = 'all';
+
+$sessionClause = $timeFrame !== 'all'
+    ? " AND EXISTS (SELECT 1 FROM student session_student WHERE session_student.student_id = i.student_id AND session_student.student_intake = " . $pdo->quote($timeFrame) . ")"
+    : '';
+
+$stateClause = $stateFilter !== 'all' ? " AND c.company_state = " . $pdo->quote($stateFilter) : '';
+$baseInternshipWhere = " WHERE i.lecturer_id = " . (int) $lecturer_id . $sessionClause . $stateClause;
+$studentFilterClause = '';
+if ($studentFilter === 'intern') {
+    $studentFilterClause = " AND i.internship_status IN ('Accepted','Active','Completed')";
+} elseif ($studentFilter === 'pending') {
+    $studentFilterClause = " AND i.internship_status IN ('Pending','Applied')";
+} elseif ($studentFilter === 'not_intern') {
+    $studentFilterClause = " AND i.internship_status IN ('Rejected')";
+}
+
+function selected_option($current, $value)
+{
+    return $current === $value ? 'selected' : '';
+}
+
+function chart_labels($rows) { return array_column($rows, 'label'); }
+function chart_totals($rows) { return array_map('intval', array_column($rows, 'total')); }
+
+$totalSupervised = (int) $pdo->query("
+    SELECT COUNT(DISTINCT student_id) AS total
+    FROM internship
+    WHERE lecturer_id = " . (int) $lecturer_id . "
+")->fetch()['total'];
+
+$stats = [
+    'students' => (int) $pdo->query("
+        SELECT COUNT(DISTINCT i.student_id) AS total
+        FROM internship i
+        JOIN company c ON c.company_id = i.company_id
+        $baseInternshipWhere $studentFilterClause
+    ")->fetch()['total'],
+    'student_intern' => (int) $pdo->query("
+        SELECT COUNT(DISTINCT i.student_id) AS total
+        FROM internship i
+        JOIN company c ON c.company_id = i.company_id
+        $baseInternshipWhere AND i.internship_status IN ('Accepted','Active','Completed')
+    ")->fetch()['total'],
+    'companies' => (int) $pdo->query("
+        SELECT COUNT(DISTINCT i.company_id) AS total
+        FROM internship i
+        JOIN company c ON c.company_id = i.company_id
+        $baseInternshipWhere $studentFilterClause
+    ")->fetch()['total'],
+    'internships' => (int) $pdo->query("
+        SELECT COUNT(i.internship_id) AS total
+        FROM internship i
+        JOIN company c ON c.company_id = i.company_id
+        $baseInternshipWhere $studentFilterClause
+    ")->fetch()['total'],
+    'evaluated' => (int) $pdo->query("
+        SELECT COUNT(le.le_id) AS total
+        FROM internship i
+        JOIN company c ON c.company_id = i.company_id
+        LEFT JOIN lecturerevaluation le ON le.internship_id = i.internship_id
+        $baseInternshipWhere $studentFilterClause
+    ")->fetch()['total'],
+    'average_score' => $pdo->query("
+        SELECT ROUND(AVG(r.report_total_score), 1) AS total
+        FROM internship i
+        JOIN company c ON c.company_id = i.company_id
+        LEFT JOIN report r ON r.internship_id = i.internship_id
+        $baseInternshipWhere $studentFilterClause
+    ")->fetch()['total'] ?? 0,
+];
+
+$programmeStats = $pdo->query("
+    SELECT
+        SUM(CASE WHEN s.student_course LIKE '%Information Systems%' THEN 1 ELSE 0 END) AS ais_total,
+        SUM(CASE WHEN s.student_course NOT LIKE '%Information Systems%' THEN 1 ELSE 0 END) AS accounting_total
+    FROM internship i
+    JOIN student s ON s.student_id = i.student_id
+    JOIN company c ON c.company_id = i.company_id
+    $baseInternshipWhere $studentFilterClause
+")->fetch();
+
+$studentStatus = $pdo->query("
+    SELECT
+        SUM(CASE WHEN i.internship_status IN ('Accepted','Active','Completed') THEN 1 ELSE 0 END) AS intern_total,
+        SUM(CASE WHEN i.internship_status IN ('Pending','Applied') THEN 1 ELSE 0 END) AS pending_total,
+        SUM(CASE WHEN i.internship_status IN ('Rejected') THEN 1 ELSE 0 END) AS not_intern_total
+    FROM internship i
+    JOIN company c ON c.company_id = i.company_id
+    $baseInternshipWhere $studentFilterClause
+")->fetch();
+
+$stateStats = $pdo->query("
+    SELECT COALESCE(NULLIF(c.company_state, ''), 'Not Set') AS label, COUNT(i.internship_id) AS total
+    FROM internship i
+    JOIN company c ON c.company_id = i.company_id
+    $baseInternshipWhere $studentFilterClause
+    GROUP BY label
+    ORDER BY total DESC, label
+")->fetchAll();
+
+$allowanceStats = $pdo->query("
+    SELECT COALESCE(NULLIF(c.company_allowance_range, ''), 'Not Set') AS label, COUNT(i.internship_id) AS total
+    FROM internship i
+    JOIN company c ON c.company_id = i.company_id
+    $baseInternshipWhere $studentFilterClause
+    GROUP BY label
+    ORDER BY FIELD(label, 'RM0 - RM300', 'RM301 - RM600', 'RM601 - RM900', 'RM901 - RM1,200', 'Above RM1,200'), label
+")->fetchAll();
+
+$industryStats = $pdo->query("
+    SELECT COALESCE(NULLIF(c.company_type, ''), 'Not Set') AS label, COUNT(i.internship_id) AS total
+    FROM internship i
+    JOIN company c ON c.company_id = i.company_id
+    $baseInternshipWhere $studentFilterClause
+    GROUP BY label
+    ORDER BY total DESC, label
+")->fetchAll();
+
+$fieldStats = $pdo->query("
+    SELECT COALESCE(NULLIF(i.internship_field, ''), NULLIF(j.job_title, ''), 'Not Set') AS label, COUNT(i.internship_id) AS total
+    FROM internship i
+    JOIN company c ON c.company_id = i.company_id
+    LEFT JOIN jobposting j ON j.job_id = i.job_id
+    $baseInternshipWhere $studentFilterClause
+    GROUP BY label
+    ORDER BY total DESC, label
+")->fetchAll();
+
+$stateCoordinates = [
+    'Johor' => [1.4854, 103.7618],
+    'Kedah' => [6.1184, 100.3685],
+    'Kelantan' => [6.1254, 102.2381],
+    'Melaka' => [2.1896, 102.2501],
+    'Negeri Sembilan' => [2.7258, 101.9424],
+    'Pahang' => [3.8126, 103.3256],
+    'Perak' => [4.5921, 101.0901],
+    'Perlis' => [6.4449, 100.2048],
+    'Pulau Pinang' => [5.4164, 100.3327],
+    'Sabah' => [5.9804, 116.0735],
+    'Sarawak' => [1.5533, 110.3592],
+    'Selangor' => [3.0738, 101.5183],
+    'Terengganu' => [5.3117, 103.1324],
+    'Kuala Lumpur' => [3.1390, 101.6869],
+    'Labuan' => [5.2831, 115.2308],
+    'Putrajaya' => [2.9264, 101.6964],
+];
+$stateMapData = [];
+foreach ($stateStats as $row) {
+    $state = $row['label'];
+    if (!isset($stateCoordinates[$state])) continue;
+    $stateMapData[] = [
+        'name' => $state,
+        'lat' => $stateCoordinates[$state][0],
+        'lng' => $stateCoordinates[$state][1],
+        'total' => (int) $row['total'],
+    ];
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecturer Dashboard - InternHub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/theme.css">
+    <link rel="stylesheet" href="../assets/css/internhub.css?v=20260615-v2">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="../assets/js/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root {
+            --maroon: #4b0712;
+            --maroon-soft: #8d183b;
+            --gold: #d2aa45;
+            --teal: #16877f;
+            --paper: #ffffff;
+            --page: #f7f2f4;
+            --line: #ead7dc;
+            --muted: #6f7480;
+        }
+        body { background: var(--page); color: #141923; }
+        .sidebar { min-height: 100vh; background: linear-gradient(180deg, #260308 0%, var(--maroon) 100%); padding: 18px 14px; }
+        .brand-card { background: #fff; border-radius: 8px; padding: 10px; margin: 0 auto 10px; max-width: 190px; text-align: center; }
+        .brand-card img { max-width: 100%; height: 46px; object-fit: contain; }
+        .brand-title { color: #fff; text-align: center; font-size: 24px; font-weight: 900; margin-bottom: 14px; }
+        .brand-title:after { content: ""; display: block; width: 42px; height: 3px; background: var(--gold); margin: 7px auto 0; }
+        .sidebar a { color: #fff; text-decoration: none; display: block; padding: 10px 14px; border-radius: 6px; font-weight: 700; margin-bottom: 5px; font-size: 14px; }
+        .sidebar a.active, .sidebar a:hover { background: rgba(141, 24, 59, .9); border-left: 4px solid var(--gold); }
+        .content { padding: 6px 10px; min-height: 100vh; overflow-y: auto; }
+        .topbar, .filterbar, .panel, .summary-card { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 26px rgba(75, 7, 18, .06); }
+        .topbar { padding: 5px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; min-height: 48px; }
+        .topbar h2 { font-size: 21px; font-weight: 900; margin: 0; }
+        .profile-pill { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
+        .profile-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--maroon-soft), var(--gold)); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; }
+        .filterbar { padding: 5px 10px; margin-bottom: 6px; }
+        .filterbar label { font-size: 10px; color: var(--muted); font-weight: 800; }
+        .filterbar .form-select, .filterbar .btn { min-height: 30px; padding-top: 3px; padding-bottom: 3px; font-size: 13px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-bottom: 6px; }
+        .summary-card { padding: 6px 8px; min-height: 62px; border-left: 5px solid var(--maroon-soft); }
+        .summary-card h6 { font-size: 10px; font-weight: 900; margin: 0 0 4px; line-height: 1.1; }
+        .summary-card .number { color: var(--maroon); font-size: 22px; font-weight: 900; line-height: 1; }
+        .summary-card small { color: var(--muted); font-weight: 600; font-size: 10px; line-height: 1.1; display: block; }
+        .dashboard-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+        .dashboard-grid-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .panel { padding: 8px; min-height: 0; }
+        .panel h4, .panel h5 { font-weight: 900; margin-bottom: 4px; font-size: 17px; }
+        .chart-wrap { height: 140px; }
+        .chart-wrap.tall { height: 205px; }
+        .map-board { height: 150px; background: #edf2f8; border: 1px solid #dce5f2; border-radius: 8px; position: relative; overflow: hidden; }
+        .map-tools { position: absolute; top: 8px; right: 8px; z-index: 500; display: flex; gap: 5px; }
+        .map-tools span { width: 24px; height: 24px; border-radius: 5px; background: rgba(255,255,255,.92); border: 1px solid #dce5f2; display: inline-flex; align-items: center; justify-content: center; color: #6f7480; font-size: 11px; }
+        .leaflet-container { font-family: inherit; }
+        .leaflet-control-attribution { font-size: 9px; }
+        @media (max-width: 1100px) {
+            .summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .dashboard-grid, .dashboard-grid-bottom { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 900px) {
+            .summary-grid, .dashboard-grid, .dashboard-grid-bottom { grid-template-columns: 1fr; }
+            .topbar { align-items: flex-start; flex-direction: column; }
+            .sidebar { min-height: auto; }
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <aside class="col-md-2 sidebar">
+            <div class="sb-brand">
+                <img class="sb-logo" src="../assets/img/logo-light.png" alt="TISSA &middot; Universiti Utara Malaysia">
+                <span class="sb-wordmark">Intern<span>Hub</span></span>
+            </div>
+            <a href="lecturer_dashboard.php" class="active"><i class="fas fa-chart-pie me-2"></i> Dashboard</a>
+            <a href="profile.php"><i class="fas fa-user me-2"></i> Profile</a>
+            <a href="interns.php"><i class="fas fa-user-graduate me-2"></i> My Interns</a>
+            <a href="logbooks.php"><i class="fas fa-book me-2"></i> Logbooks</a>
+            <a href="report.php"><i class="fas fa-table me-2"></i> Reports</a>
+            <a href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i> Logout</a>
+        </aside>
+
+        <main class="col-md-10 content ih-main">
+            <header class="ih-topbar">
+                <div>
+                    <div class="ih-kicker">Lecturer &middot; Supervision</div>
+                    <h1 class="ih-title">Supervisor Dashboard</h1>
+                </div>
+                <div class="ih-topbar-right">
+                    <div class="ih-datechip">
+                        <strong><?php echo date('d M Y, l'); ?></strong>
+                        <small id="liveClock"><?php echo date('h:i A'); ?></small>
+                    </div>
+                    <button type="button" class="ih-iconbtn" title="Notifications"><i class="fas fa-bell"></i><span class="ih-dot"></span></button>
+                    <a class="ih-userpill" href="profile.php" title="Open profile">
+                        <span class="ih-avatar"><?php echo htmlspecialchars(strtoupper(substr($_SESSION['user_name'] ?? 'L', 0, 1))); ?></span>
+                        <span class="nm"><strong><?php echo htmlspecialchars($_SESSION['user_name'] ?? 'Lecturer'); ?></strong><small>Lecturer</small></span>
+                    </a>
+                </div>
+            </header>
+
+            <div class="ih-wrap">
+            <p class="text-muted" style="margin:4px 0 18px;font-size:13px;">Only students supervised by <?php echo htmlspecialchars($lecturer['lecturer_name'] ?? 'this lecturer'); ?> are shown.</p>
+
+            <form class="ih-controls" method="GET">
+                <div class="row g-2 align-items-end">
+                    <div class="col-xl-3 col-lg-4 col-md-6">
+                        <label>Session</label>
+                        <select class="form-select" name="time_frame">
+                            <option value="all" <?php echo selected_option($timeFrame, 'all'); ?>>All Sessions</option>
+                            <?php foreach ($sessionOptions as $session): ?>
+                                <option value="<?php echo htmlspecialchars(strtoupper($session)); ?>" <?php echo selected_option($timeFrame, strtoupper($session)); ?>><?php echo htmlspecialchars(strtoupper($session)); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-xl-3 col-lg-4 col-md-6">
+                        <label>State</label>
+                        <select class="form-select" name="state">
+                            <option value="all" <?php echo selected_option($stateFilter, 'all'); ?>>All States</option>
+                            <?php foreach ($malaysiaStates as $state): ?>
+                                <option value="<?php echo htmlspecialchars($state); ?>" <?php echo selected_option($stateFilter, $state); ?>><?php echo htmlspecialchars($state); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-xl-3 col-lg-4 col-md-6">
+                        <label>Student</label>
+                        <select class="form-select" name="student_filter">
+                            <option value="all" <?php echo selected_option($studentFilter, 'all'); ?>>All</option>
+                            <option value="intern" <?php echo selected_option($studentFilter, 'intern'); ?>>Student Intern</option>
+                            <option value="pending" <?php echo selected_option($studentFilter, 'pending'); ?>>Pending</option>
+                            <option value="not_intern" <?php echo selected_option($studentFilter, 'not_intern'); ?>>Not Intern</option>
+                        </select>
+                    </div>
+                    <div class="col-xl-3 col-lg-12 d-flex gap-2">
+                        <button class="btn btn-primary" type="submit"><i class="fas fa-filter me-1"></i> Apply</button>
+                        <a class="btn btn-outline-secondary" href="lecturer_dashboard.php"><i class="fas fa-rotate-left me-1"></i> Reset</a>
+                    </div>
+                </div>
+            </form>
+
+            <div class="ih-stats">
+                <article class="ih-stat"><div class="ih-stat-top"><span class="ih-stat-label">Supervised Students</span><span class="ih-stat-ic"><i class="fas fa-user-graduate"></i></span></div><div class="ih-stat-num"><?php echo (int) $stats['students']; ?></div><div class="ih-stat-foot"><span class="ih-rule"></span><span class="ih-stat-sub">Your students</span></div></article>
+                <article class="ih-stat ih-stat--green"><div class="ih-stat-top"><span class="ih-stat-label">Student Interns</span><span class="ih-stat-ic"><i class="fas fa-user-check"></i></span></div><div class="ih-stat-num"><?php echo (int) $stats['student_intern']; ?></div><div class="ih-stat-foot"><span class="ih-rule"></span><span class="ih-stat-sub">Placed students</span></div></article>
+                <article class="ih-stat ih-stat--blue"><div class="ih-stat-top"><span class="ih-stat-label">Companies</span><span class="ih-stat-ic"><i class="fas fa-building"></i></span></div><div class="ih-stat-num"><?php echo (int) $stats['companies']; ?></div><div class="ih-stat-foot"><span class="ih-rule"></span><span class="ih-stat-sub">Assigned companies</span></div></article>
+                <article class="ih-stat"><div class="ih-stat-top"><span class="ih-stat-label">Internships</span><span class="ih-stat-ic"><i class="fas fa-briefcase"></i></span></div><div class="ih-stat-num"><?php echo (int) $stats['internships']; ?></div><div class="ih-stat-foot"><span class="ih-rule"></span><span class="ih-stat-sub">Placements</span></div></article>
+                <article class="ih-stat ih-stat--gold"><div class="ih-stat-top"><span class="ih-stat-label">Evaluated</span><span class="ih-stat-ic"><i class="fas fa-clipboard-check"></i></span></div><div class="ih-stat-num"><?php echo (int) $stats['evaluated']; ?></div><div class="ih-stat-foot"><span class="ih-rule"></span><span class="ih-stat-sub">Completed evaluations</span></div></article>
+                <article class="ih-stat"><div class="ih-stat-top"><span class="ih-stat-label">B.Acct Students</span><span class="ih-stat-ic"><i class="fas fa-graduation-cap"></i></span></div><div class="ih-stat-num"><?php echo (int) $programmeStats['accounting_total']; ?></div><div class="ih-stat-foot"><span class="ih-rule"></span><span class="ih-stat-sub">Accounting programme</span></div></article>
+                <article class="ih-stat ih-stat--blue"><div class="ih-stat-top"><span class="ih-stat-label">B.Acct (IS) Students</span><span class="ih-stat-ic"><i class="fas fa-laptop-code"></i></span></div><div class="ih-stat-num"><?php echo (int) $programmeStats['ais_total']; ?></div><div class="ih-stat-foot"><span class="ih-rule"></span><span class="ih-stat-sub">Information systems</span></div></article>
+            </div>
+
+            <div class="ih-grid-3">
+                <section class="ih-panel">
+                    <div class="ih-panel-head"><div class="ih-panel-eyebrow">Geography</div><h3 class="ih-panel-title">Placements across Malaysia</h3></div>
+                    <div class="ih-panel-body">
+                        <div class="ih-map">
+                            <div class="ih-map-tools" aria-label="Map controls">
+                                <span title="Map view"><i class="fas fa-map"></i></span>
+                                <span title="Chart view"><i class="fas fa-chart-bar"></i></span>
+                            </div>
+                            <div id="lecturerStateMap" style="height: 100%; width: 100%;"></div>
+                        </div>
+                    </div>
+                </section>
+                <section class="ih-panel">
+                    <div class="ih-panel-head"><div class="ih-panel-eyebrow">Compensation</div><h3 class="ih-panel-title">Allowance Range</h3></div>
+                    <div class="ih-panel-body"><div class="ih-chart"><canvas id="allowanceChart"></canvas></div></div>
+                </section>
+                <section class="ih-panel">
+                    <div class="ih-panel-head"><div class="ih-panel-eyebrow">Status</div><h3 class="ih-panel-title">Placement Status</h3></div>
+                    <div class="ih-panel-body"><div class="ih-chart"><canvas id="placementChart"></canvas></div></div>
+                </section>
+            </div>
+
+            <div class="ih-grid-2">
+                <section class="ih-panel">
+                    <div class="ih-panel-head"><div class="ih-panel-eyebrow">Sectors</div><h3 class="ih-panel-title">Industry Type Distribution</h3></div>
+                    <div class="ih-panel-body"><div class="ih-chart lg"><canvas id="industryChart"></canvas></div></div>
+                </section>
+                <section class="ih-panel">
+                    <div class="ih-panel-head"><div class="ih-panel-eyebrow">Disciplines</div><h3 class="ih-panel-title">Internship Field Distribution</h3></div>
+                    <div class="ih-panel-body"><div class="ih-chart lg"><canvas id="fieldChart"></canvas></div></div>
+                </section>
+            </div>
+
+            </div><!-- /.ih-wrap -->
+        </main>
+    </div>
+</div>
+
+<script>
+if (window.Chart) {
+    Chart.defaults.font.family = "'Hanken Grotesk', system-ui, sans-serif";
+    Chart.defaults.font.size = 11;
+    Chart.defaults.color = '#5c4a50';
+    Chart.defaults.plugins.legend.labels.usePointStyle = true;
+    Chart.defaults.plugins.legend.labels.boxWidth = 8;
+    Chart.defaults.plugins.legend.labels.padding = 14;
+}
+const palette = ['#8a1a38', '#cda23f', '#34589c', '#2f7d5b', '#b6841c', '#a83052', '#6e1228'];
+const lecturerStateMapData = <?php echo json_encode($stateMapData); ?>;
+
+const lecturerMap = L.map('lecturerStateMap', {
+    zoomControl: false,
+    scrollWheelZoom: false,
+    dragging: true
+}).setView([4.4, 109.5], 5);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap'
+}).addTo(lecturerMap);
+
+lecturerStateMapData.forEach((item) => {
+    L.circleMarker([item.lat, item.lng], {
+        radius: Math.max(6, Math.min(18, item.total * 3)),
+        color: '#8a1a38',
+        fillColor: '#cda23f',
+        fillOpacity: 0.6,
+        weight: 2
+    })
+        .addTo(lecturerMap)
+        .bindTooltip(`${item.name}: ${item.total}`, { permanent: false })
+        .bindPopup(`<strong>${item.name}</strong><br>${item.total} supervised student(s)`);
+});
+
+function makeBar(id, labels, data, horizontal = false) {
+    new Chart(document.getElementById(id), {
+        type: 'bar',
+        data: { labels, datasets: [{ data, backgroundColor: palette, borderRadius: 6 }] },
+        options: {
+            indexAxis: horizontal ? 'y' : 'x',
+            maintainAspectRatio: false,
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { beginAtZero: true, ticks: { precision: 0, autoSkip: false, maxRotation: horizontal ? 0 : 0, minRotation: 0, font: { size: horizontal ? 11 : 9 } } },
+                y: { beginAtZero: true, ticks: { precision: 0, autoSkip: false, font: { size: 11 } } }
+            }
+        }
+    });
+}
+
+function makeDoughnut(id, labels, data) {
+    new Chart(document.getElementById(id), {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: palette, borderColor: '#fff', borderWidth: 2 }] },
+        options: { maintainAspectRatio: false, responsive: true, plugins: { legend: { position: 'bottom' } }, cutout: '58%' }
+    });
+}
+
+function makeLine(id, labels, data) {
+    new Chart(document.getElementById(id), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Students',
+                data,
+                borderColor: '#8a1a38',
+                backgroundColor: 'rgba(138, 26, 56, 0.12)',
+                pointBackgroundColor: '#cda23f',
+                pointBorderColor: '#6e1228',
+                pointRadius: 4,
+                fill: true,
+                tension: 0.35
+            }]
+        },
+        options: { maintainAspectRatio: false, responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 45, minRotation: 0 } }, y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    });
+}
+
+makeLine('allowanceChart', <?php echo json_encode(chart_labels($allowanceStats)); ?>, <?php echo json_encode(chart_totals($allowanceStats)); ?>);
+makeDoughnut('placementChart', ['Student Intern', 'Pending', 'Not Intern'], [<?php echo (int) $studentStatus['intern_total']; ?>, <?php echo (int) $studentStatus['pending_total']; ?>, <?php echo (int) $studentStatus['not_intern_total']; ?>]);
+makeBar('industryChart', <?php echo json_encode(chart_labels($industryStats)); ?>, <?php echo json_encode(chart_totals($industryStats)); ?>, true);
+makeBar('fieldChart', <?php echo json_encode(chart_labels($fieldStats)); ?>, <?php echo json_encode(chart_totals($fieldStats)); ?>);
+
+setInterval(() => {
+    document.getElementById('liveClock').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}, 1000);
+</script>
+</body>
+</html>

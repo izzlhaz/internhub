@@ -1,0 +1,106 @@
+-- Real-company internship directory seed for InternHub.
+-- Public-facing details are intended for demonstration and should be verified
+-- with each company's official website before external communication.
+
+START TRANSACTION;
+
+CREATE TEMPORARY TABLE real_company_seed (
+    company_name varchar(200) NOT NULL,
+    company_email varchar(150) NOT NULL,
+    company_phone varchar(20) DEFAULT NULL,
+    company_address varchar(255) DEFAULT NULL,
+    company_state varchar(80) DEFAULT NULL,
+    company_postcode varchar(10) DEFAULT NULL,
+    company_description text DEFAULT NULL,
+    company_type varchar(100) DEFAULT NULL,
+    allowance_range varchar(40) DEFAULT NULL,
+    capacity_programme varchar(40) DEFAULT NULL,
+    capacity_ais int NOT NULL DEFAULT 0,
+    capacity_accounting int NOT NULL DEFAULT 0,
+    PRIMARY KEY (company_email)
+);
+
+INSERT INTO real_company_seed VALUES
+('PwC Malaysia', 'my_contact@pwc.com', '+603 2173 1188', '1 Sentral, Jalan Rakyat, Kuala Lumpur Sentral', 'Kuala Lumpur', '50470', 'Professional services firm providing assurance, tax, deals, consulting and digital transformation services.', 'Audit, Tax & Advisory', 'RM1,000 - RM1,500', 'Both Programs', 5, 12),
+('KPMG in Malaysia', 'info@kpmg.com.my', '+603 7721 3388', 'KPMG Tower, 8 First Avenue, Bandar Utama', 'Selangor', '47800', 'Professional services firm offering audit, tax and advisory services across multiple industries.', 'Audit, Tax & Advisory', 'RM1,000 - RM1,500', 'Both Programs', 5, 12),
+('Deloitte Malaysia', 'mycontact@deloitte.com', '+603 7610 8888', 'Menara LGB, 1 Jalan Wan Kadir, Taman Tun Dr Ismail', 'Kuala Lumpur', '60000', 'Professional services organisation specialising in audit and assurance, consulting, financial advisory, risk advisory and tax.', 'Audit, Consulting & Tax', 'RM1,000 - RM1,500', 'Both Programs', 6, 12),
+('EY Malaysia', 'malaysia@my.ey.com', '+603 7495 8000', 'Menara Milenium, Jalan Damanlela, Pusat Bandar Damansara', 'Kuala Lumpur', '50490', 'Professional services organisation providing assurance, consulting, strategy, transactions and tax services.', 'Audit, Consulting & Tax', 'RM1,000 - RM1,500', 'Both Programs', 6, 12),
+('BDO Malaysia', 'info@bdo.my', '+603 2616 2888', 'BDO @ Menara CenTARa, 360 Jalan Tuanku Abdul Rahman', 'Kuala Lumpur', '50100', 'Audit and advisory firm serving public-listed companies, private businesses and growing enterprises.', 'Audit, Tax & Advisory', 'RM900 - RM1,300', 'Both Programs', 4, 10),
+('Grant Thornton Malaysia', 'info@my.gt.com', '+603 2692 4022', 'Sheraton Imperial Court, Jalan Sultan Ismail', 'Kuala Lumpur', '50250', 'Accounting and consulting firm providing assurance, tax, business advisory and outsourcing services.', 'Audit, Tax & Advisory', 'RM900 - RM1,300', 'Both Programs', 3, 9),
+('Baker Tilly Malaysia', 'info@bakertilly.my', '+603 2297 1000', 'Tower 5, Avenue 7, Bangsar South City', 'Kuala Lumpur', '59200', 'Professional services firm providing audit, tax, corporate advisory, governance and technology consulting.', 'Audit, Tax & Advisory', 'RM900 - RM1,300', 'Both Programs', 4, 10),
+('Crowe Malaysia PLT', 'info@crowe.my', '+603 2788 9999', 'Tower C, Megan Avenue II, 12 Jalan Yap Kwan Seng', 'Kuala Lumpur', '50450', 'Accounting and advisory firm offering audit, tax, risk, corporate advisory and business support services.', 'Audit, Tax & Advisory', 'RM900 - RM1,300', 'Both Programs', 4, 10),
+('RSM Malaysia PLT', 'general@rsmmalaysia.my', '+603 2610 2888', 'Wisma RKT, 2 Jalan Raja Abdullah, Kampung Baru', 'Kuala Lumpur', '50300', 'Audit, tax and consulting firm focused on middle-market organisations and owner-managed businesses.', 'Audit, Tax & Consulting', 'RM900 - RM1,300', 'Both Programs', 3, 8),
+('YYC Advisors', 'enquiry@yycadvisors.com', '+603 2780 8100', 'Jalan Jalil Perkasa 13, Bukit Jalil', 'Kuala Lumpur', '57000', 'Malaysian accounting group providing accounting, tax, audit, payroll and business advisory solutions for SMEs.', 'Accounting, Tax & Advisory', 'RM800 - RM1,200', 'Both Programs', 2, 8),
+('AutoCount Dotcom Berhad', 'info@autocountsoft.com', '+603 7729 3777', 'Jalan PJU 8/5G, Damansara Perdana', 'Selangor', '47820', 'Malaysian financial management software company developing accounting, payroll, point-of-sale and cloud solutions.', 'Accounting Software & Technology', 'RM900 - RM1,400', 'Both Programs', 10, 4),
+('SQL Account by E Stream MSC', 'sales@sql.com.my', '+603 8075 0868', 'Bandar Puteri, Puchong', 'Selangor', '47100', 'Malaysian business software provider offering accounting, payroll, e-invoice and cloud-based financial solutions.', 'Accounting Software & Technology', 'RM900 - RM1,400', 'Both Programs', 10, 4);
+
+INSERT INTO user (
+    user_name, user_email, user_password, user_status, user_created_by,
+    user_role, user_must_change_password, user_ic_password_initialized
+)
+SELECT
+    company_name,
+    company_email,
+    '$2y$10$Tg2eGLtP1qYE6zvbDHVkY.jNfX09ZPIVzRWhtFjX.AWTDhIVfKdfy',
+    'Active',
+    1,
+    'company',
+    0,
+    0
+FROM real_company_seed
+ON DUPLICATE KEY UPDATE
+    user_name = VALUES(user_name),
+    user_status = 'Active';
+
+INSERT INTO company (
+    user_id, company_name, company_email, company_registration_no,
+    company_phone, company_address, company_address_line, company_state,
+    company_postcode, company_description, company_type,
+    company_business_status, company_owner_name, company_approval_status,
+    company_contact_person, company_allowance_range,
+    company_capacity_programme, company_capacity_ais,
+    company_capacity_accounting, open_slots
+)
+SELECT
+    u.user_id,
+    s.company_name,
+    s.company_email,
+    NULL,
+    s.company_phone,
+    s.company_address,
+    s.company_address,
+    s.company_state,
+    s.company_postcode,
+    s.company_description,
+    s.company_type,
+    'Active',
+    'Corporate Management',
+    'Approved',
+    'Internship & Careers Team',
+    s.allowance_range,
+    s.capacity_programme,
+    s.capacity_ais,
+    s.capacity_accounting,
+    s.capacity_ais + s.capacity_accounting
+FROM real_company_seed s
+JOIN user u ON u.user_email = s.company_email
+ON DUPLICATE KEY UPDATE
+    company_name = VALUES(company_name),
+    company_phone = VALUES(company_phone),
+    company_address = VALUES(company_address),
+    company_address_line = VALUES(company_address_line),
+    company_state = VALUES(company_state),
+    company_postcode = VALUES(company_postcode),
+    company_description = VALUES(company_description),
+    company_type = VALUES(company_type),
+    company_business_status = VALUES(company_business_status),
+    company_approval_status = VALUES(company_approval_status),
+    company_contact_person = VALUES(company_contact_person),
+    company_allowance_range = VALUES(company_allowance_range),
+    company_capacity_programme = VALUES(company_capacity_programme),
+    company_capacity_ais = VALUES(company_capacity_ais),
+    company_capacity_accounting = VALUES(company_capacity_accounting),
+    open_slots = VALUES(open_slots);
+
+DROP TEMPORARY TABLE real_company_seed;
+COMMIT;

@@ -1,0 +1,79 @@
+-- Move all students except DANIAL RAHMAN into the To Assign queue.
+-- Preserves the company/job selected during demo placement generation but
+-- removes lecturer assignment until the coordinator assigns a supervisor.
+
+START TRANSACTION;
+
+CREATE TEMPORARY TABLE placement_to_queue AS
+SELECT
+    i.internship_id,
+    i.student_id,
+    i.job_id,
+    i.internship_start_date,
+    i.internship_end_date
+FROM internship i
+JOIN student s ON s.student_id = i.student_id
+WHERE i.internship_id > 50
+  AND i.internship_status = 'Active'
+  AND UPPER(TRIM(s.student_name)) <> 'DANIAL RAHMAN';
+
+INSERT INTO resume (
+    student_id,
+    resume_file_name,
+    resume_internship_start_date,
+    resume_internship_end_date,
+    resume_description
+)
+SELECT
+    queued.student_id,
+    'Internship placement record',
+    queued.internship_start_date,
+    queued.internship_end_date,
+    'Placement prepared for supervisor assignment.'
+FROM placement_to_queue queued
+LEFT JOIN resume r ON r.student_id = queued.student_id
+WHERE r.resume_id IS NULL;
+
+UPDATE resume r
+JOIN placement_to_queue queued ON queued.student_id = r.student_id
+SET
+    r.resume_internship_start_date = COALESCE(r.resume_internship_start_date, queued.internship_start_date),
+    r.resume_internship_end_date = COALESCE(r.resume_internship_end_date, queued.internship_end_date);
+
+INSERT INTO application (
+    student_id,
+    job_id,
+    resume_id,
+    application_status,
+    application_student_response,
+    application_applied_date
+)
+SELECT
+    queued.student_id,
+    queued.job_id,
+    r.resume_id,
+    'Accepted',
+    'Accepted',
+    CURRENT_TIMESTAMP
+FROM placement_to_queue queued
+JOIN resume r ON r.student_id = queued.student_id
+LEFT JOIN application existing
+  ON existing.student_id = queued.student_id
+ AND existing.job_id = queued.job_id
+WHERE existing.application_id IS NULL;
+
+UPDATE application a
+JOIN placement_to_queue queued
+  ON queued.student_id = a.student_id
+ AND queued.job_id = a.job_id
+SET
+    a.application_status = 'Accepted',
+    a.application_student_response = 'Accepted';
+
+DELETE i
+FROM internship i
+JOIN placement_to_queue queued ON queued.internship_id = i.internship_id;
+
+DROP TEMPORARY TABLE placement_to_queue;
+
+COMMIT;

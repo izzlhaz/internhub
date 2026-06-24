@@ -1,0 +1,21 @@
+-- Reconnect legacy demo job and internship records to the current companies.
+
+START TRANSACTION;
+
+UPDATE jobposting
+SET company_id = CASE job_id
+    WHEN 1 THEN 22 WHEN 2 THEN 25 WHEN 3 THEN 28 WHEN 4 THEN 30
+    WHEN 5 THEN 24 WHEN 6 THEN 33 WHEN 7 THEN 26 WHEN 8 THEN 23
+    WHEN 9 THEN 27 WHEN 10 THEN 29 WHEN 11 THEN 31 WHEN 12 THEN 32
+    WHEN 13 THEN 24 WHEN 14 THEN 33 WHEN 15 THEN 26 WHEN 16 THEN 22
+    WHEN 17 THEN 27 WHEN 18 THEN 28 WHEN 19 THEN 31 WHEN 20 THEN 30
+    WHEN 21 THEN 23 ELSE company_id
+END
+WHERE company_id NOT IN (SELECT company_id FROM company);
+
+UPDATE internship i
+JOIN jobposting j ON j.job_id = i.job_id
+SET i.company_id = j.company_id
+WHERE i.company_id NOT IN (SELECT company_id FROM company);
+
+COMMIT;

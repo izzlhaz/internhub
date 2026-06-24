@@ -1,0 +1,145 @@
+-- TISSA lecturer directory seed
+-- Source: http://www.tissa.uum.edu.my/directory (retrieved 2026-06-15)
+-- Executives are deduplicated against their academic unit records.
+
+START TRANSACTION;
+
+CREATE TEMPORARY TABLE tissa_lecturer_seed (
+  staff_id varchar(30) NOT NULL,
+  lecturer_name varchar(100) NOT NULL,
+  email varchar(150) NOT NULL,
+  office_phone varchar(20) DEFAULT NULL,
+  department varchar(100) NOT NULL,
+  programme varchar(100) NOT NULL,
+  lecturer_role varchar(50) NOT NULL,
+  PRIMARY KEY (email),
+  UNIQUE KEY (staff_id)
+);
+
+INSERT INTO tissa_lecturer_seed (staff_id, lecturer_name, email, office_phone, department, programme, lecturer_role) VALUES
+('TISSA001', 'Assoc. Prof. Dr. Raja Haslinda Raja Mohd Ali', 'rj.linda@uum.edu.my', '+604 928 7200', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA002', 'Assoc. Prof. Dr. Arifatul Husna Mohd. Ariff', 'arifatul@uum.edu.my', '+604 928 7202', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA003', 'Assoc. Prof. Dr. Saliza Abdul Aziz C.A.(M), CPA (Aust)', 'saliza@uum.edu.my', '+604 928 7203', 'Taxation', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA004', 'Dr. Mohd Hadzrami Harun Rasit', 'hadzrami@uum.edu.my', '+604 928 7204', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA005', 'Assoc. Prof. Dr. Siti Seri Delima Abdul Malak', 'seridelima@uum.edu.my', '+604 928 7208', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA006', 'Dr. Mohd Hadafi Sahdan', 'hadafi@uum.edu.my', '+604 928 7207', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA007', 'Assoc. Prof. Dr. Idawati Ibrahim', 'idawati@uum.edu.my', '+604 928 7217', 'Taxation', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA008', 'Dr. Mazrah Malik @ Malek', 'mazrah@uum.edu.my', '+604 928 7206', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA009', 'Dr. Khairina Rosli', 'khairina@uum.edu.my', '+604 928 7209', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA010', 'Dr. Safrul Izani Mohd Salleh', 's.izani.mohd@uum.edu.my', '+604 928 7335', 'Management Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA011', 'Faisol Elham, Dr., CFiA', 'faisol@uum.edu.my', '+604 928 7239', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA012', 'Fathilatul Zakimi Abdul Hamid, Dr., CFiA', 'zakimi@uum.edu.my', '+604 928 7241', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA013', 'Fathiyyah Abu Bakar, Dr., C.A.(M), CPA (Aust.)', 'fathiyyah@uum.edu.my', '+604 928 7242', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA014', 'Halimah @ Nasibah Ahmad, Dr.', 'halimahmad@uum.edu.my', '+604 928 7245', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA015', 'Hasnah Hj. Shaari, Dr., C.A.(M), CPA (Aus)', 's.hasnah@uum.edu.my', '+604 928 7248', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA016', 'Hasnah Kamardin, Dr., CFiA, CMA', 'hasnahk@uum.edu.my', '+604 928 7249', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA017', 'Jamaliah Abdul Majid, Dr.', 'jamaliah@uum.edu.my', '+604 928 7254', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA018', 'Kamarul Bahrain Abdul Manaf, Dr.', 'kama1183@uum.edu.my', '+604 928 7256', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA019', 'Lok Yee Huei, Dr.', 'lok.yee.huei@uum.edu.my', '+6017-4880084', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA020', 'Masanita Mat Noh, Mdm.', 'masanita@uum.edu.my', '+604 928 7262', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA021', 'Mohamad Sharofi Hj. Ismail, Mr., AIIA', 'sharofi@uum.edu.my', '+604 928 7267', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA022', 'Mohd. Amir Mat Samsudin, Dr., FIPA', 'amir@uum.edu.my', '+604 928 7271', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA023', 'Mohd. Farid Asraf Md Hashim, Dr.', 'mdfarid@uum.edu.my', '+604 928 7273', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA024', 'Muhammad Syahir Abd. Wahab, Dr., CPA (Aus)', 'syahir@uum.edu.my', '+604 928 7282', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA025', 'Nor Asma Lode, Dr., CFP', 'asma@uum.edu.my', '+604 928 7291', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA026', 'Nor Atikah binti Shafai, Dr.', 'noratikah@uum.edu.my', '+604 928 7327', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA027', 'Nor Laili Hassan, Dr.', 'norlaili@uum.edu.my', '+604 928 7293', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA028', 'Norazita Marina Abdul Aziz, Dr.', 'azita@uum.edu.my', '+604 928 7296', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA029', 'Norfaiezah Sawandi, Dr., C.A.(M), CPA , CFP', 'ezah@uum.edu.my', '+604 928 7351', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA030', 'Norhani Aripin, Dr., CFiA', 'norhani@uum.edu.my', '+604 928 7299', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA031', 'Noriah Che Adam, Dr., CFiA', 'noriah@uum.edu.my', '+604 928 7300', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA032', 'Ooi Sue Chern, Dr.', 'suechern@uum.edu.my', '+604 928 7343', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA033', 'Ram Al Jaffri Saad, Dr., PNA', 'ram@uum.edu.my', '+604 928 7306', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA034', 'Redhwan Ahmed Ali Al-Dhamari, Dr', 'redhwan@uum.edu.my', '+604 928 7544', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA035', 'Rohaida Abdul Latif, Dr., CFP', 'rohaida@uum.edu.my', '+604 928 7310', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA036', 'Rokiah Ishak, Dr., CFiA', 'rokiah@uum.edu.my', '+604 928 7313', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA037', 'Ropidah Omar, Dr., C.A.(M), CFiA', 'ropidah@uum.edu.my', '+604 928 7314', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA038', 'Sitraselvi A/P Chandren, Dr., C.A.(M), FCCA (UK), AAT (UK)', 'sitraselvi@uum.edu.my', '+604 928 7328', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA039', 'Tan Chee Yu, Mr., CFP', 'cytan@uum.edu.my', '+604 928 7334', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA040', 'Zaimah Abdullah, Dr., C.A.(M), CPA, CFP', 'zaimah2258@uum.edu.my', '+604 928 7338', 'Financial Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA041', 'Amin Ali, CMA, FIPA, A.M.(M)', 'amin@uum.edu.my', '+604 928 7225', 'Management Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA042', 'Che Zuriana Muhamad Jamil, Dr., CMA', 'zuriana@uum.edu.my', '+604 928 7233', 'Management Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA043', 'Danilah Salleh, Dr., PNA', 'danilah@uum.edu.my', '+604 928 7218', 'Management Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA044', 'Faidzulaini Muhammad, Mdm.', 'faidzulaini@uum.edu.my', '+604 928 7238', 'Management Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA045', 'Hafizah Abd Mutalib, Dr., A.M.(M)', 'amhafizah@uum.edu.my', '+604 928 7265', 'Management Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA046', 'Hazeline Ayoup, Dr., CFiA', 'hazel@uum.edu.my', '+604 928 7250', 'Management Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA047', 'Md Hairi Md Hussain, Dr.', 'hairi@uum.edu.my', '+604 928 7263', 'Management Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA048', 'Muhammad Rosni Amir Hussin, Dr.', 'mohdrosni@uum.edu.my', '+604 928 7281', 'Management Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA049', 'Noor Asma Jamaluddin, Mdm., CMA', 'noorasma@uum.edu.my', '+604 928 7288', 'Management Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA050', 'Nur Azliani Haniza Che Pak, Dr., CFiA', 'azliani@uum.edu.my', '+604 928 7301', 'Management Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA051', 'Wan Norhayati Wan Ahmad, Dr.', 'wnwa@uum.edu.my', '+604 928 7336', 'Management Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA052', 'Zarifah Abdullah, Dr., CMA', 'zarifah@uum.edu.my', '+604 928 7344', 'Management Accounting', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA053', 'Aryati Juliana Sulaiman, Dr.', 'aryati@uum.edu.my', '+604 928 7227', 'Taxation', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA054', 'Farah Mastura Noor Azman, Dr.', 'farah.mastura@uum.edu.my', '+604 928 xxxx', 'Taxation', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA055', 'Munusamy A/L Marimuthu, Dr.', 'munusamy@uum.edu.my', '+604 928 7283', 'Taxation', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA056', 'Nadzirah Mohd Said, Dr.', 'nadzirahsaid@uum.edu.my', '+604 928 xxxx', 'Taxation', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA057', 'Natrah Saad, Dr., CFiA', 'natrah@uum.edu.my', '+604 928 7285', 'Taxation', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA058', 'Nor Aziah Abd. Manaf, Dr., FIPA', 'aziah960@uum.edu.my', '+604 928 7292', 'Taxation', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA059', 'Noraza Mat Udin, Dr.', 'nora896@uum.edu.my', '+604 928 7295', 'Taxation', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA060', 'Rusniza Abdul Rahman, Dr.', 'rusniza@uum.edu.my', '+604 928 7302', 'Taxation', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA061', 'Saidatul Nurul Hidayah Jannatun Naim bt Nor Ahmad, Dr.', 'saidatul@uum.edu.my', '+604 928 7289', 'Taxation', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA062', 'Zaimah Zainol Ariffin, Dr., CFiA', 'zaimah@uum.edu.my', '+604 928 7339', 'Taxation', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA063', 'Zainol Bidin, Dr., C.A.(M)', 'b.zainol@uum.edu.my', '+604 928 7340', 'Taxation', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA064', 'Adura Ahmad, Dr.', 'adura@uum.edu.my', '+604 928 7218', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA065', 'Alsayani Esam Mohammed Ahmed, Dr.', 'esam.mohammed@uum.edu.my', '+604 928 xxxx', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA066', 'Ayoib Che Ahmad, Dr., CMA', 'ayoib@uum.edu.my', '+604 928 xxxx', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA067', 'Azharudin Ali, Dr, AIIA, A.M.(M)', 'azharudin@uum.edu.my', '+604 928 7230', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA068', 'Azlan Zainol Abidin, Mr.', 'azlan@uum.edu.my', '+604 928 7231', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA069', 'Basariah Salim, Dr.', 'basa1189@uum.edu.my', '+604 928 7232', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA070', 'Dzarfan Abdul Kadir, Dr., C.A.(M), CPA', 'dzarfan@uum.edu.my', '+604 928 7236', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA071', 'Ifa Rizad Mustapa, Dr.', 'ifarizad@uum.edu.my', '+604 928 7321', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA072', 'Mohamad Naimi Mohamad Nor, Dr., C.A.(M)', 'naimi@uum.edu.my', '+604 928 7266', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA073', 'Mohamad Zulkurnai Ghazali, Dr., FIPA', 'zulghazali@uum.edu.my', '+604 928 7268', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA074', 'Mohd. Raime Ramlan, Dr.', 'raime@uum.edu.my', '+604 928 7278', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA075', 'Mohd. Syahrir Hj. Rahim, Dr.', 'syahrir@uum.edu.my', '+604 928 7279', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA076', 'Mudzamir Mohamed, Dr., PNA, CFE', 'mudzamir@uum.edu.my', '+604 928 7280', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA077', 'Noor Afza Amran, Dr., CFiA', 'afza@uum.edu.my', '+604 928 7287', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA078', 'Nor Zalina Mohamad Yusof, Dr., C.A.(M), CPA (Aus)', 'nzalina@uum.edu.my', '+604 928 7333', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA079', 'Rohami Shafie, Dr.', 'rohami@uum.edu.my', '+604 928 7311', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA080', 'Saudah Ahmad, Dr.', 'saudah@uum.edu.my', '+604 928 7323', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA081', 'Shamharir Abidin, Dr.', 'sham1202@uum.edu.my', '+604 928 7326', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA082', 'Siti Zabedah Hj Saidin, Dr.', 'zabedah@uum.edu.my', '+604 928 7330', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA083', 'Suhaimi Ishak, Dr., C.A.(M), IFP', 'suhaimiishak@uum.edu.my', '+604 928 7332', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA084', 'Zakiyah Sharif, Dr.', 'zaez2205@uum.edu.my', '+604 928 7342', 'Audit', 'Bachelor of Accounting (Hons)', 'Supervisor'),
+('TISSA085', 'Aidi Ahmi, Ts., Dr., C.A.(M), AIIA', 'aidi@uum.edu.my', '+604 928 7222', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA086', 'Akilah Abdullah, Dr.', 'akilah@uum.edu.my', '+604 928 7223', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA087', 'Amdan Mohamed, ASP/KS', 'amdan@uum.edu.my', '+604 928 7224', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA088', 'Fariza Hanim Rusly, Dr., PNA', 'hanim@uum.edu.my', '+604 928 7240', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA089', 'Hafizah Mohamad Hsbollah, Dr.', 'hs.hafizah@uum.edu.my', '+604 928 7244', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA090', 'Haslinda Hassan, Dr.', 'lynn@uum.edu.my', '+604 928 7247', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA091', 'Ku Maisurah Ku Bahador, Dr.', 'kumaisurah@uum.edu.my', '+604 928 7259', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA092', 'Marhaiza Ibrahim, Dr.', 'marhaiza@uum.edu.my', '+604 928 7261', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA093', 'Mohd. Herry Mohd. Nasir, Dr., CPA', 'herry@uum.edu.my', '+604 928 7276', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA094', 'Mohd. Hisham Mohd Sharif, Dr.', 'hisham79@uum.edu.my', '+604 928 7277', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA095', 'Muhammad Harith bin Zahrullaili, Dr.', 'mharith@uum.edu.my', '+604 928 3972', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA096', 'Norhaiza Khairudin, Dr.', 'norhaiza@uum.edu.my', '+604 928 7209', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA097', 'Rafeah Mat Saat, Dr.', 'rafeah@uum.edu.my', '+604 928 7304', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA098', 'Raudah Danila, Mdm., CFiA, A.M.(M), FIPA', 'raudah@uum.edu.my', '+604 928 7308', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA099', 'Rosli Mohamad, Dr., A.M.(M)', 'roslim@uum.edu.my', '+604 928 7317', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA100', 'Rusman Ghani, Dr., C.A.(M)', 'rusman@uum.edu.my', '+604 928 7319', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA101', 'Sazali Saad, Dr., C.A. (M)', 'sazali@uum.edu.my', '+604 928 7324', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA102', 'Shahifol Arbi Ismail, Dr., ASA, CFP', 'arbi@uum.edu.my', '+604 928 7325', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor'),
+('TISSA103', 'Yurita Yakimin Abdul Talib, Dr.', 'yurita@uum.edu.my', '+604 928 7337', 'Accounting Information System', 'Bachelor of Accounting (Information Systems) (Hons)', 'Supervisor');
+
+INSERT INTO user (user_name, user_email, user_password, user_status, user_created_by, user_role, user_must_change_password, user_ic_password_initialized)
+SELECT lecturer_name, email, '$2y$10$Tg2eGLtP1qYE6zvbDHVkY.jNfX09ZPIVzRWhtFjX.AWTDhIVfKdfy', 'Active', 1, 'lecturer', 1, 0
+FROM tissa_lecturer_seed
+ON DUPLICATE KEY UPDATE
+  user_name = VALUES(user_name),
+  user_status = 'Active';
+
+INSERT INTO lecturer (lecturer_staff_id, user_id, lecturer_programme, lecturer_name, lecturer_gender, lecturer_ic, lecturer_email, lecturer_phone, lecturer_office_phone, lecturer_department, lecturer_role, lecturer_max_student)
+SELECT s.staff_id, u.user_id, s.programme, s.lecturer_name, 'Other', NULL, s.email, NULL, s.office_phone, s.department, s.lecturer_role, 10
+FROM tissa_lecturer_seed s
+JOIN user u ON u.user_email = s.email
+ON DUPLICATE KEY UPDATE
+  lecturer_programme = VALUES(lecturer_programme),
+  lecturer_name = VALUES(lecturer_name),
+  lecturer_email = VALUES(lecturer_email),
+  lecturer_office_phone = VALUES(lecturer_office_phone),
+  lecturer_department = VALUES(lecturer_department),
+  lecturer_role = VALUES(lecturer_role);
+
+DROP TEMPORARY TABLE tissa_lecturer_seed;
+COMMIT;
+

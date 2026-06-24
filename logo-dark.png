@@ -1,0 +1,21 @@
+ALTER TABLE resume
+    ADD COLUMN IF NOT EXISTS resume_file_name varchar(255) DEFAULT NULL AFTER student_id,
+    ADD COLUMN IF NOT EXISTS resume_file_type varchar(100) DEFAULT NULL AFTER resume_file_name,
+    ADD COLUMN IF NOT EXISTS resume_file_size bigint unsigned DEFAULT NULL AFTER resume_file_type,
+    ADD COLUMN IF NOT EXISTS resume_file_data longblob DEFAULT NULL AFTER resume_file_size,
+    ADD COLUMN IF NOT EXISTS resume_uploaded_at datetime DEFAULT NULL AFTER resume_file_data;
+
+ALTER TABLE student
+    ADD COLUMN IF NOT EXISTS student_photo_name varchar(255) DEFAULT NULL AFTER student_state,
+    ADD COLUMN IF NOT EXISTS student_photo_type varchar(100) DEFAULT NULL AFTER student_photo_name,
+    ADD COLUMN IF NOT EXISTS student_photo_data longblob DEFAULT NULL AFTER student_photo_type,
+    ADD COLUMN IF NOT EXISTS student_photo_uploaded_at datetime DEFAULT NULL AFTER student_photo_data;
+
+UPDATE student SET
+    student_matric_no = UPPER(student_matric_no),
+    student_name = UPPER(student_name),
+    student_intake = UPPER(student_intake),
+    student_address = UPPER(student_address),
+    student_state = UPPER(student_state);
+
+UPDATE user u JOIN student s ON s.user_id = u.user_id SET u.user_name = s.student_name;
